@@ -14,32 +14,45 @@ func main() {
 		}
 	}()
 
-	requestString := os.Args[1]
+	input := os.Args[1]
 
-	var request = make(map[string]any)
+	var request = make(map[string]interface{})
 
-	err := json.Unmarshal([]byte(requestString), &request)
+	err := json.Unmarshal([]byte(input), &request)
 
 	if err != nil {
-		panic(err.Error())
+		fmt.Println(err)
+		return
 	}
 
-	/*response := linux.Discover(request)
+	/*response, err := linux.Discover(request)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	jsonStr, err := json.Marshal(response)
 
 	if err != nil {
-		panic(err.Error())
+		fmt.Println(err)
+		return
 	}
 
 	fmt.Println(fmt.Sprintf("%v", string(jsonStr)))*/
 
-	response := linux.Collect(request)
+	response, err := linux.Collect(request)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	jsonStr, err := json.Marshal(response)
 
 	if err != nil {
-		panic(err.Error())
+		fmt.Println(err)
+		return
 	}
 
 	fmt.Println(fmt.Sprintf("%v", string(jsonStr)))

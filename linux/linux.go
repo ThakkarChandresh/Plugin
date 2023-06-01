@@ -2,97 +2,103 @@ package linux
 
 import (
 	"Plugin/linux/process"
+	"Plugin/linux/util"
 	"golang.org/x/crypto/ssh"
 	"strings"
 	"time"
 )
 
-func getConnection(profile map[string]any) (connection *ssh.Client) {
+func getConnection(profile map[string]interface{}) (connection *ssh.Client, err error) {
 	config := &ssh.ClientConfig{
-		User:            profile["credential_profile"].(map[string]any)["username"].(string),
-		Auth:            []ssh.AuthMethod{ssh.Password(profile["credential_profile"].(map[string]any)["password"].(string))},
+		User:            profile[util.CredentialProfile].(map[string]interface{})[util.Username].(string),
+		Auth:            []ssh.AuthMethod{ssh.Password(profile[util.CredentialProfile].(map[string]interface{})[util.Password].(string))},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         30 * time.Second,
+		Timeout:         util.SSHTimout * time.Second,
 	}
 
-	connection, err := ssh.Dial("tcp", profile["discovery_profile"].(map[string]any)["ip"].(string)+":"+profile["discovery_profile"].(map[string]any)["port"].(string), config)
-
-	if err != nil {
-		panic(err.Error())
-	}
+	connection, err = ssh.Dial(util.TCP, profile[util.DiscoveryProfile].(map[string]interface{})[util.IP].(string)+util.Colon+profile[util.DiscoveryProfile].(map[string]interface{})[util.Port].(string), config)
 
 	return
 }
 
-func executeCommand(command string, connection *ssh.Client) string {
+func executeCommand(command string, connection *ssh.Client) (result string, err error) {
 	session, err := connection.NewSession()
 
 	//Session will automatically close
 
 	if err != nil {
-		panic(err.Error())
+		return
 	}
 
-	result, err := session.Output(command)
+	output, err := session.Output(command)
 
 	if err != nil {
-		panic(err.Error())
+		return
 	}
 
-	return strings.ReplaceAll(string(result), "\n", "")
+	result = strings.ReplaceAll(string(output), util.NewLine, util.Empty)
+	return
 }
 
-func Discover(profile map[string]any) (response map[string]any) {
-	response = make(map[string]any)
+func Discover(profile map[string]interface{}) (response map[string]interface{}, err error) {
+	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			response["status"] = "device not discovered!"
-			response["err"] = r
+			response[util.Status] = util.NotDiscovered
+			response[util.Err] = r
 		}
 	}()
 
-	connection := getConnection(profile)
+	connection, err := getConnection(profile)
+
+	if err != nil {
+		return
+	}
 
 	defer func(connection *ssh.Client) {
-		err := connection.Close()
-
-		if err != nil {
-			panic(err.Error())
+		if e := connection.Close(); e != nil {
+			err = e
 		}
 	}(connection)
 
-	command := "hostname"
+	command := util.Hostname
 
-	result := executeCommand(command, connection)
+	result, err := executeCommand(command, connection)
 
-	response["status"] = "device discovered successfully!"
-	response["hostname"] = result
+	if err != nil {
+		return
+	}
+
+	response[util.Status] = util.Discovered
+	response[util.Hostname] = result
 
 	return
 }
 
-func Collect(profile map[string]any) (response map[string]any) {
-	response = make(map[string]any)
+func Collect(profile map[string]interface{}) (response map[string]interface{}, err error) {
+	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			response["status"] = "failed!"
-			response["err"] = r
+			response[util.Status] = util.Fail
+			response[util.Err] = r
 		}
 	}()
 
-	connection := getConnection(profile)
+	connection, err := getConnection(profile)
+
+	if err != nil {
+		return
+	}
 
 	defer func(connection *ssh.Client) {
-		err := connection.Close()
-
-		if err != nil {
-			panic(err.Error())
+		if e := connection.Close(); e != nil {
+			err = e
 		}
 	}(connection)
 
-	channel := make(chan map[string]any)
+	channel := make(chan map[string]interface{})
 
 	go process.GetProcessMetrics(connection, channel)
 
