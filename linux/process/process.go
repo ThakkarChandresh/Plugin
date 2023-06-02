@@ -56,37 +56,26 @@ func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]i
 		return
 	}
 
-	outputInfo := strings.Split(strings.TrimSpace(strings.ReplaceAll(string(output), util.NewLine, util.SpaceSeparator)), util.SpaceSeparator)
+	allProcessMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.NewLine)
 
-	resultLength := strings.Count(string(output), "\n")
+	result := make([]map[string]interface{}, len(allProcessMetrics))
 
-	result := make([]map[string]interface{}, resultLength)
+	for i := 0; i < len(allProcessMetrics); i++ {
+		process := strings.Split(allProcessMetrics[i], util.SpaceSeparator)
 
-	for i, j := 0, 0; i < len(outputInfo); i++ {
+		processMetrics := make(map[string]interface{})
 
-		processInfo := make(map[string]interface{})
+		processMetrics[processPID] = process[0]
 
-		processInfo[processPID] = outputInfo[i]
+		processMetrics[processCPU] = process[1]
 
-		i++
+		processMetrics[processMemory] = process[2]
 
-		processInfo[processCPU] = outputInfo[i]
+		processMetrics[processUser] = process[3]
 
-		i++
+		processMetrics[processCommand] = process[4]
 
-		processInfo[processMemory] = outputInfo[i]
-
-		i++
-
-		processInfo[processUser] = outputInfo[i]
-
-		i++
-
-		processInfo[processCommand] = outputInfo[i]
-
-		result[j] = processInfo
-
-		j++
+		result[i] = processMetrics
 	}
 
 	response[systemProcess] = result

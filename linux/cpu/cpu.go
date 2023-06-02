@@ -57,9 +57,9 @@ func GetCpuMetrics(profile map[string]interface{}, channel chan map[string]inter
 		return
 	}
 
-	outputInfo := strings.Split(string(output), util.NewLine)
+	allCPUMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.NewLine)
 
-	cores, err := strconv.Atoi(outputInfo[0])
+	cores, err := strconv.Atoi(allCPUMetrics[0])
 
 	if err != nil {
 		return
@@ -67,34 +67,34 @@ func GetCpuMetrics(profile map[string]interface{}, channel chan map[string]inter
 
 	response = make(map[string]interface{})
 
-	allCpuInfo := strings.Split(outputInfo[1], util.SpaceSeparator)
+	avgCPUMetrics := strings.Split(allCPUMetrics[1], util.SpaceSeparator)
 
 	response[cpuCores] = cores
 
-	response[cpuPercentage] = allCpuInfo[1]
+	response[cpuPercentage] = avgCPUMetrics[1]
 
-	response[cpuUserPercentage] = allCpuInfo[2]
+	response[cpuUserPercentage] = avgCPUMetrics[2]
 
-	response[cpuIdlePercentage] = allCpuInfo[3]
+	response[cpuIdlePercentage] = avgCPUMetrics[3]
 
-	outputInfo = outputInfo[2 : len(outputInfo)-1]
+	allCPUMetrics = allCPUMetrics[2:]
 
 	result := make([]map[string]interface{}, cores)
 
-	for i := 0; i < len(outputInfo); i++ {
-		oneCpuOutput := strings.Split(outputInfo[i], util.SpaceSeparator)
+	for i := 0; i < len(allCPUMetrics); i++ {
+		cpu := strings.Split(allCPUMetrics[i], util.SpaceSeparator)
 
-		oneCpuInfo := make(map[string]any)
+		cpuMetrics := make(map[string]any)
 
-		oneCpuInfo[cpuCore] = oneCpuOutput[0]
+		cpuMetrics[cpuCore] = cpu[0]
 
-		oneCpuInfo[cpuPercentage] = oneCpuOutput[1]
+		cpuMetrics[cpuPercentage] = cpu[1]
 
-		oneCpuInfo[cpuUserPercentage] = oneCpuOutput[2]
+		cpuMetrics[cpuUserPercentage] = cpu[2]
 
-		oneCpuInfo[cpuIdlePercentage] = oneCpuOutput[3]
+		cpuMetrics[cpuIdlePercentage] = cpu[3]
 
-		result[i] = oneCpuInfo
+		result[i] = cpuMetrics
 	}
 
 	response[SystemCPU] = result

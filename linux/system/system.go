@@ -58,29 +58,23 @@ func GetSystemInformationMetrics(profile map[string]interface{}, channel chan ma
 		return
 	}
 
-	outputInfo := strings.Split(string(output), util.NewLine)
+	systemInfoMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.NewLine)
 
-	upTiming := outputInfo[1]
+	response[upTime] = systemInfoMetrics[1]
 
-	operatingSystemOutput := outputInfo[2]
+	response[osVersion] = strings.TrimSpace(strings.Split(systemInfoMetrics[2], util.Colon)[1])
 
-	outputInfo = strings.Split(strings.TrimSpace(outputInfo[0]), util.SpaceSeparator)
+	systemInfoMetrics = strings.Split(strings.TrimSpace(systemInfoMetrics[0]), util.SpaceSeparator)
 
-	operatingSystemInfo := strings.Split(strings.TrimSpace(operatingSystemOutput), util.Colon)
+	response[systemName] = systemInfoMetrics[0]
 
-	response[osVersion] = operatingSystemInfo[1]
+	response[osName] = systemInfoMetrics[1]
 
-	response[systemName] = outputInfo[0]
+	response[threads] = systemInfoMetrics[2]
 
-	response[osName] = outputInfo[1]
+	response[contextSwitches] = systemInfoMetrics[3]
 
-	response[upTime] = upTiming
+	response[runningProcesses] = systemInfoMetrics[4]
 
-	response[threads] = outputInfo[2]
-
-	response[contextSwitches] = outputInfo[3]
-
-	response[runningProcesses] = outputInfo[4]
-
-	response[blockProcesses] = outputInfo[5]
+	response[blockProcesses] = systemInfoMetrics[5]
 }

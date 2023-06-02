@@ -57,19 +57,19 @@ func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]in
 		return
 	}
 
-	outputInfo := strings.Split(strings.TrimSpace(strings.ReplaceAll(string(output), util.NewLine, util.SpaceSeparator)), util.SpaceSeparator)
+	memoryMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.SpaceSeparator)
 
-	response[installedMemory] = outputInfo[0]
+	response[installedMemory] = memoryMetrics[0]
 
-	response[usedMemory] = outputInfo[1]
+	response[usedMemory] = memoryMetrics[1]
 
-	response[usedMemoryPercentage] = outputInfo[2]
+	response[usedMemoryPercentage] = memoryMetrics[2]
 
-	response[freeMemory] = outputInfo[3]
+	response[freeMemory] = memoryMetrics[3]
 
-	response[freeMemoryPercentage] = outputInfo[4]
+	response[freeMemoryPercentage] = memoryMetrics[4]
 
-	response[availableMemory] = outputInfo[5]
+	response[availableMemory] = memoryMetrics[5]
 
-	response[swapMemory] = outputInfo[6]
+	response[swapMemory] = memoryMetrics[6]
 }

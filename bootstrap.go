@@ -18,11 +18,7 @@ func main() {
 	var request = make(map[string]interface{})
 
 	defer func() {
-		jsonStr, err := json.Marshal(request)
-
-		if err != nil {
-			request["err"] = fmt.Sprintf("%v", err)
-		}
+		jsonStr, _ := json.Marshal(request)
 
 		fmt.Println(fmt.Sprintf("%v", string(jsonStr)))
 	}()
