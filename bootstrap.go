@@ -48,7 +48,9 @@ func main() {
 		return
 	}
 
-	jsonStr, err := json.Marshal(response)
+	request["result"] = response
+
+	jsonStr, err := json.Marshal(request)
 
 	if err != nil {
 		fmt.Println(err)

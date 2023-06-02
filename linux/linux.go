@@ -1,8 +1,12 @@
 package linux
 
 import (
+	"Plugin/linux/cpu"
+	"Plugin/linux/information"
+	"Plugin/linux/memory"
 	"Plugin/linux/process"
 	"Plugin/linux/util"
+	"errors"
 	"golang.org/x/crypto/ssh"
 	"strings"
 	"time"
@@ -45,8 +49,7 @@ func Discover(profile map[string]interface{}) (response map[string]interface{}, 
 
 	defer func() {
 		if r := recover(); r != nil {
-			response[util.Status] = util.NotDiscovered
-			response[util.Err] = r
+			err = errors.New(r.(string))
 		}
 	}()
 
@@ -71,6 +74,7 @@ func Discover(profile map[string]interface{}) (response map[string]interface{}, 
 	}
 
 	response[util.Status] = util.Discovered
+
 	response[util.Hostname] = result
 
 	return
@@ -81,8 +85,7 @@ func Collect(profile map[string]interface{}) (response map[string]interface{}, e
 
 	defer func() {
 		if r := recover(); r != nil {
-			response[util.Status] = util.Fail
-			response[util.Err] = r
+			err = errors.New(r.(string))
 		}
 	}()
 
@@ -94,15 +97,29 @@ func Collect(profile map[string]interface{}) (response map[string]interface{}, e
 
 	defer func(connection *ssh.Client) {
 		if e := connection.Close(); e != nil {
+
 			err = e
+
 		}
 	}(connection)
 
-	channel := make(chan map[string]interface{})
+	channel := make(chan map[string]interface{}, 4)
 
 	go process.GetProcessMetrics(connection, channel)
 
-	response = <-channel
+	go memory.GetMemoryMetrics(connection, channel)
+
+	go information.GetSystemInformationMetrics(connection, channel)
+
+	go cpu.GetCpuMetrics(connection, channel)
+
+	for i := 0; i < 4; i++ {
+		output := <-channel
+
+		for key, value := range output {
+			response[key] = value
+		}
+	}
 
 	return
 }
