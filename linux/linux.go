@@ -2,28 +2,21 @@ package linux
 
 import (
 	"Plugin/linux/cpu"
-	"Plugin/linux/information"
 	"Plugin/linux/memory"
 	"Plugin/linux/process"
+	"Plugin/linux/system"
 	"Plugin/linux/util"
 	"errors"
+	"fmt"
 	"golang.org/x/crypto/ssh"
 	"strings"
-	"time"
 )
 
-func getConnection(profile map[string]interface{}) (connection *ssh.Client, err error) {
-	config := &ssh.ClientConfig{
-		User:            profile[util.CredentialProfile].(map[string]interface{})[util.Username].(string),
-		Auth:            []ssh.AuthMethod{ssh.Password(profile[util.CredentialProfile].(map[string]interface{})[util.Password].(string))},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         util.SSHTimout * time.Second,
-	}
-
-	connection, err = ssh.Dial(util.TCP, profile[util.DiscoveryProfile].(map[string]interface{})[util.IP].(string)+util.Colon+profile[util.DiscoveryProfile].(map[string]interface{})[util.Port].(string), config)
-
-	return
-}
+const (
+	status   string = "status"
+	hostname string = "hostname"
+	success  string = "success"
+)
 
 func executeCommand(command string, connection *ssh.Client) (result string, err error) {
 	session, err := connection.NewSession()
@@ -45,37 +38,36 @@ func executeCommand(command string, connection *ssh.Client) (result string, err 
 }
 
 func Discover(profile map[string]interface{}) (response map[string]interface{}, err error) {
+
 	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(r.(string))
+			err = errors.New(fmt.Sprintf("%v", r))
 		}
 	}()
 
-	connection, err := getConnection(profile)
+	connection, err := util.GetConnection(profile)
 
 	if err != nil {
 		return
 	}
 
 	defer func(connection *ssh.Client) {
-		if e := connection.Close(); e != nil {
-			err = e
+		if closeErr := connection.Close(); closeErr != nil {
+			err = closeErr
 		}
 	}(connection)
 
-	command := util.Hostname
-
-	result, err := executeCommand(command, connection)
+	result, err := executeCommand(hostname, connection)
 
 	if err != nil {
 		return
 	}
 
-	response[util.Status] = util.Discovered
+	response[status] = success
 
-	response[util.Hostname] = result
+	response[hostname] = result
 
 	return
 }
@@ -85,33 +77,23 @@ func Collect(profile map[string]interface{}) (response map[string]interface{}, e
 
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(r.(string))
+			err = errors.New(fmt.Sprintf("%v", r))
 		}
 	}()
 
-	connection, err := getConnection(profile)
-
-	if err != nil {
-		return
-	}
-
-	defer func(connection *ssh.Client) {
-		if e := connection.Close(); e != nil {
-
-			err = e
-
-		}
-	}(connection)
-
 	channel := make(chan map[string]interface{}, 4)
 
-	go process.GetProcessMetrics(connection, channel)
+	defer func() {
+		close(channel)
+	}()
 
-	go memory.GetMemoryMetrics(connection, channel)
+	go process.GetProcessMetrics(profile, channel)
 
-	go information.GetSystemInformationMetrics(connection, channel)
+	go memory.GetMemoryMetrics(profile, channel)
 
-	go cpu.GetCpuMetrics(connection, channel)
+	go system.GetSystemInformationMetrics(profile, channel)
+
+	go cpu.GetCpuMetrics(profile, channel)
 
 	for i := 0; i < 4; i++ {
 		output := <-channel

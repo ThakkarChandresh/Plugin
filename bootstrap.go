@@ -5,57 +5,58 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
+)
+
+const (
+	discovery   string = "Discovery"
+	polling     string = "Polling"
+	requestType string = "type"
 )
 
 func main() {
+	var request = make(map[string]interface{})
+
+	defer func() {
+		jsonStr, err := json.Marshal(request)
+
+		if err != nil {
+			request["err"] = fmt.Sprintf("%v", err)
+		}
+
+		fmt.Println(fmt.Sprintf("%v", string(jsonStr)))
+	}()
+
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println(r)
+			request["err"] = fmt.Sprintf("%v", r)
 		}
 	}()
 
 	input := os.Args[1]
 
-	var request = make(map[string]interface{})
-
 	err := json.Unmarshal([]byte(input), &request)
 
 	if err != nil {
-		fmt.Println(err)
+		request["err"] = fmt.Sprintf("%v", err)
 		return
 	}
 
-	/*response, err := linux.Discover(request)
+	var response = make(map[string]interface{})
 
-	if err != nil {
-		fmt.Println(err)
-		return
+	if strings.EqualFold(request[requestType].(string), discovery) {
+
+		response, err = linux.Discover(request)
+
+	} else if strings.EqualFold(request[requestType].(string), polling) {
+
+		response, err = linux.Collect(request)
 	}
 
-	jsonStr, err := json.Marshal(response)
-
 	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println(fmt.Sprintf("%v", string(jsonStr)))*/
-
-	response, err := linux.Collect(request)
-
-	if err != nil {
-		fmt.Println(err)
+		request["err"] = fmt.Sprintf("%v", err)
 		return
 	}
 
 	request["result"] = response
-
-	jsonStr, err := json.Marshal(request)
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println(fmt.Sprintf("%v", string(jsonStr)))
 }

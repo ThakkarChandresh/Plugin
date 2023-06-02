@@ -8,9 +8,15 @@ import (
 
 const (
 	processInfoCommand string = `ps aux | awk 'NR> 1 {print $2 " " $3 "% " $4 "% " $1" "$11}'`
+	systemProcess      string = "system.process"
+	processPID         string = "system.process.pid"
+	processCPU         string = "system.process.cpu"
+	processMemory      string = "system.process.memory"
+	processUser        string = "system.process.user"
+	processCommand     string = "system.process.command"
 )
 
-func GetProcessMetrics(connection *ssh.Client, channel chan map[string]interface{}) {
+func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
 	response := make(map[string]interface{})
 
 	defer func() {
@@ -19,9 +25,22 @@ func GetProcessMetrics(connection *ssh.Client, channel chan map[string]interface
 
 	defer func() {
 		if r := recover(); r != nil {
-			//response[util.SystemProcess] = map[string]interface{}{util.Status: util.Fail, util.Err: r}
 		}
 	}()
+
+	connection, err := util.GetConnection(profile)
+
+	if err != nil {
+		return
+	}
+
+	defer func(connection *ssh.Client) {
+		if e := connection.Close(); e != nil {
+
+			err = e
+
+		}
+	}(connection)
 
 	session, err := connection.NewSession()
 
@@ -44,31 +63,32 @@ func GetProcessMetrics(connection *ssh.Client, channel chan map[string]interface
 	result := make([]map[string]interface{}, resultLength)
 
 	for i, j := 0, 0; i < len(outputInfo); i++ {
+
 		processInfo := make(map[string]interface{})
 
-		processInfo[util.ProcessPID] = outputInfo[i]
+		processInfo[processPID] = outputInfo[i]
 
 		i++
 
-		processInfo[util.ProcessCPU] = outputInfo[i]
+		processInfo[processCPU] = outputInfo[i]
 
 		i++
 
-		processInfo[util.ProcessMemory] = outputInfo[i]
+		processInfo[processMemory] = outputInfo[i]
 
 		i++
 
-		processInfo[util.ProcessUser] = outputInfo[i]
+		processInfo[processUser] = outputInfo[i]
 
 		i++
 
-		processInfo[util.ProcessCommand] = outputInfo[i]
+		processInfo[processCommand] = outputInfo[i]
 
 		result[j] = processInfo
 
 		j++
 	}
 
-	response[util.SystemProcess] = result
+	response[systemProcess] = result
 
 }

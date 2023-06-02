@@ -8,10 +8,16 @@ import (
 )
 
 const (
-	cpuInfoCommand string = `nproc --all && mpstat -P ALL | awk 'NR>3 {print $4 " " $7 " " $5 " " $14}'`
+	cpuInfoCommand    string = `nproc --all && mpstat -P ALL | awk 'NR>3 {print $4 " " $7 " " $5 " " $14}'`
+	SystemCPU         string = "system.cpu"
+	cpuCores          string = "system.cpu.cores"
+	cpuCore           string = "system.cpu.core"
+	cpuPercentage     string = "system.cpu.percentage"
+	cpuUserPercentage string = "system.cpu.user.percentage"
+	cpuIdlePercentage string = "system.cpu.idle.percentage"
 )
 
-func GetCpuMetrics(connection *ssh.Client, channel chan map[string]interface{}) {
+func GetCpuMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
 	response := make(map[string]interface{})
 
 	defer func() {
@@ -20,9 +26,22 @@ func GetCpuMetrics(connection *ssh.Client, channel chan map[string]interface{}) 
 
 	defer func() {
 		if r := recover(); r != nil {
-			//response[util.SystemCPU] = map[string]interface{}{util.Status: util.Fail, util.Err: r}
 		}
 	}()
+
+	connection, err := util.GetConnection(profile)
+
+	if err != nil {
+		return
+	}
+
+	defer func(connection *ssh.Client) {
+		if e := connection.Close(); e != nil {
+
+			err = e
+
+		}
+	}(connection)
 
 	session, err := connection.NewSession()
 
@@ -43,7 +62,6 @@ func GetCpuMetrics(connection *ssh.Client, channel chan map[string]interface{}) 
 	cores, err := strconv.Atoi(outputInfo[0])
 
 	if err != nil {
-		response[util.SystemCPU] = map[string]interface{}{util.Status: util.Fail, util.Err: err.Error()}
 		return
 	}
 
@@ -51,33 +69,33 @@ func GetCpuMetrics(connection *ssh.Client, channel chan map[string]interface{}) 
 
 	allCpuInfo := strings.Split(outputInfo[1], util.SpaceSeparator)
 
-	response[util.CPUCores] = cores
+	response[cpuCores] = cores
 
-	response[util.CPUPercentage] = allCpuInfo[1]
+	response[cpuPercentage] = allCpuInfo[1]
 
-	response[util.CPUUserPercentage] = allCpuInfo[2]
+	response[cpuUserPercentage] = allCpuInfo[2]
 
-	response[util.CPUIdlePercentage] = allCpuInfo[3]
+	response[cpuIdlePercentage] = allCpuInfo[3]
 
 	outputInfo = outputInfo[2 : len(outputInfo)-1]
 
-	individualCpuInfo := make([]map[string]interface{}, cores)
+	result := make([]map[string]interface{}, cores)
 
 	for i := 0; i < len(outputInfo); i++ {
 		oneCpuOutput := strings.Split(outputInfo[i], util.SpaceSeparator)
 
 		oneCpuInfo := make(map[string]any)
 
-		oneCpuInfo[util.CPUCore] = oneCpuOutput[0]
+		oneCpuInfo[cpuCore] = oneCpuOutput[0]
 
-		oneCpuInfo[util.CPUPercentage] = oneCpuOutput[1]
+		oneCpuInfo[cpuPercentage] = oneCpuOutput[1]
 
-		oneCpuInfo[util.CPUUserPercentage] = oneCpuOutput[2]
+		oneCpuInfo[cpuUserPercentage] = oneCpuOutput[2]
 
-		oneCpuInfo[util.CPUIdlePercentage] = oneCpuOutput[3]
+		oneCpuInfo[cpuIdlePercentage] = oneCpuOutput[3]
 
-		individualCpuInfo[i] = oneCpuInfo
+		result[i] = oneCpuInfo
 	}
 
-	response[util.SystemCPU] = individualCpuInfo
+	response[SystemCPU] = result
 }

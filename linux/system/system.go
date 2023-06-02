@@ -1,4 +1,4 @@
-package information
+package system
 
 import (
 	"Plugin/linux/util"
@@ -8,9 +8,17 @@ import (
 
 const (
 	systemInfoCommand string = `hostname |tr '\n' " " && uname |tr '\n' " " && ps -eo nlwp | awk '{ num_threads += $1 } END { print num_threads }' | tr '\n' " " && vmstat | tail -n 1 | awk '{print $12}' | tr '\n' " " && ps axo state | grep "R" | wc -l | tr '\n' " " && ps axo stat | grep "D" | wc -l && uptime -p | awk 'gsub("up ","")' && hostnamectl | grep "Operating System"`
+	osVersion         string = "system.os.version"
+	systemName        string = "system.name"
+	osName            string = "system.os.name"
+	upTime            string = "system.uptime"
+	threads           string = "system.threads"
+	contextSwitches   string = "system.context.switches"
+	runningProcesses  string = "system.running.processes"
+	blockProcesses    string = "system.block.processes"
 )
 
-func GetSystemInformationMetrics(connection *ssh.Client, channel chan map[string]interface{}) {
+func GetSystemInformationMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
 	response := make(map[string]interface{})
 
 	defer func() {
@@ -19,9 +27,22 @@ func GetSystemInformationMetrics(connection *ssh.Client, channel chan map[string
 
 	defer func() {
 		if r := recover(); r != nil {
-			//response[util.SystemInfo] = map[string]interface{}{util.Status: util.Fail, util.Err: r}
 		}
 	}()
+
+	connection, err := util.GetConnection(profile)
+
+	if err != nil {
+		return
+	}
+
+	defer func(connection *ssh.Client) {
+		if e := connection.Close(); e != nil {
+
+			err = e
+
+		}
+	}(connection)
 
 	session, err := connection.NewSession()
 
@@ -39,7 +60,7 @@ func GetSystemInformationMetrics(connection *ssh.Client, channel chan map[string
 
 	outputInfo := strings.Split(string(output), util.NewLine)
 
-	uptime := outputInfo[1]
+	upTiming := outputInfo[1]
 
 	operatingSystemOutput := outputInfo[2]
 
@@ -47,19 +68,19 @@ func GetSystemInformationMetrics(connection *ssh.Client, channel chan map[string
 
 	operatingSystemInfo := strings.Split(strings.TrimSpace(operatingSystemOutput), util.Colon)
 
-	response[util.OsVersion] = operatingSystemInfo[1]
+	response[osVersion] = operatingSystemInfo[1]
 
-	response[util.SystemName] = outputInfo[0]
+	response[systemName] = outputInfo[0]
 
-	response[util.OsName] = outputInfo[1]
+	response[osName] = outputInfo[1]
 
-	response[util.Uptime] = uptime
+	response[upTime] = upTiming
 
-	response[util.Threads] = outputInfo[2]
+	response[threads] = outputInfo[2]
 
-	response[util.ContextSwitches] = outputInfo[3]
+	response[contextSwitches] = outputInfo[3]
 
-	response[util.RunningProcesses] = outputInfo[4]
+	response[runningProcesses] = outputInfo[4]
 
-	response[util.BlockProcesses] = outputInfo[5]
+	response[blockProcesses] = outputInfo[5]
 }
