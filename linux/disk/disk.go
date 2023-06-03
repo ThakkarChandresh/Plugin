@@ -2,19 +2,21 @@ package disk
 
 import (
 	"Plugin/linux/util"
+	"fmt"
 	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
 
 const (
-	diskInfoCommand      string = `iostat -dx | awk 'NR>3 {print $1 " " $2 " " $8 " " $3 " " $9}'`
-	systemDisk           string = "system.disk"
-	systemDiskBytes      string = "system.disk.bytes.per.sec"
-	systemDiskWriteBytes string = "system.disk.write.bytes.per.sec"
-	systemDiskReadBytes  string = "system.disk.read.bytes.per.sec"
-	systemDiskWriteOps   string = "system.disk.write.ops.per.sec"
-	systemDiskReadOps    string = "system.disk.read.ops.per.sec"
+	SystemDiskMetricsCommand   string = `iostat -dx | awk 'NR>3 {print $1 " " $2 " " $8 " " $3 " " $9}'`
+	SystemDisk                 string = "system.disk"
+	SystemDiskBytesPerSec      string = "system.disk.bytes.per.sec"
+	SystemDiskWriteBytesPerSec string = "system.disk.write.bytes.per.sec"
+	SystemDiskReadBytesPerSec  string = "system.disk.read.bytes.per.sec"
+	SystemDiskWriteOpsPerSec   string = "system.disk.write.ops.per.sec"
+	SystemDiskReadOpsPerSec    string = "system.disk.read.ops.per.sec"
+	SystemDiskError            string = "system.disk.error"
 )
 
 func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
@@ -26,20 +28,22 @@ func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]inte
 
 	defer func() {
 		if r := recover(); r != nil {
+			response[SystemDiskError] = fmt.Sprint(r)
 		}
 	}()
 
 	connection, err := util.GetConnection(profile)
 
 	if err != nil {
+		response[SystemDiskError] = fmt.Sprint(err)
+
 		return
 	}
 
 	defer func(connection *ssh.Client) {
-		if e := connection.Close(); e != nil {
+		if err = connection.Close(); err != nil {
 
-			err = e
-
+			response[SystemDiskError] = fmt.Sprint(err)
 		}
 	}(connection)
 
@@ -48,12 +52,16 @@ func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]inte
 	//Session will automatically close
 
 	if err != nil {
+		response[SystemDiskError] = fmt.Sprint(err)
+
 		return
 	}
 
-	output, err := session.Output(diskInfoCommand)
+	output, err := session.Output(SystemDiskMetricsCommand)
 
 	if err != nil {
+		response[SystemDiskError] = fmt.Sprint(err)
+
 		return
 	}
 
@@ -68,23 +76,23 @@ func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]inte
 
 		diskMetrics := make(map[string]interface{})
 
-		diskMetrics[systemDisk] = disk[0]
+		diskMetrics[SystemDisk] = disk[0]
 
 		if readOps, err := strconv.ParseFloat(disk[1], 64); err == nil {
 
-			diskMetrics[systemDiskReadOps] = readOps
+			diskMetrics[SystemDiskReadOpsPerSec] = readOps
 		}
 
 		if writeOps, err := strconv.ParseFloat(disk[2], 64); err == nil {
 
-			diskMetrics[systemDiskWriteOps] = writeOps
+			diskMetrics[SystemDiskWriteOpsPerSec] = writeOps
 		}
 
 		if readBytes, err := strconv.ParseFloat(disk[3], 64); err == nil {
 
 			readBytes *= 1024
 
-			diskMetrics[systemDiskReadBytes] = readBytes
+			diskMetrics[SystemDiskReadBytesPerSec] = readBytes
 
 			totalBytes += readBytes
 		}
@@ -93,15 +101,15 @@ func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]inte
 
 			writeBytes *= 1024
 
-			diskMetrics[systemDiskWriteBytes] = writeBytes
+			diskMetrics[SystemDiskWriteBytesPerSec] = writeBytes
 
 			totalBytes += writeBytes
 		}
 
-		diskMetrics[systemDiskBytes] = totalBytes
+		diskMetrics[SystemDiskBytesPerSec] = totalBytes
 
 		result[i] = diskMetrics
 	}
 
-	response[systemDisk] = result
+	response[SystemDisk] = result
 }

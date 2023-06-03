@@ -2,19 +2,21 @@ package process
 
 import (
 	"Plugin/linux/util"
+	"fmt"
 	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
 
 const (
-	processInfoCommand string = `ps aux | awk 'NR> 1 {print $2 " " $3 " " $4 " " $1" "$11}'`
-	systemProcess      string = "system.process"
-	processPID         string = "system.process.pid"
-	processCPU         string = "system.process.cpu"
-	processMemory      string = "system.process.memory"
-	processUser        string = "system.process.user"
-	processCommand     string = "system.process.command"
+	SystemProcessMetricsCommand string = `ps aux | awk 'NR> 1 {print $2 " " $3 " " $4 " " $1" "$11}'`
+	SystemProcess               string = "system.process"
+	SystemProcessPID            string = "system.process.pid"
+	SystemProcessCPU            string = "system.process.cpu"
+	SystemProcessMemory         string = "system.process.memory"
+	SystemProcessUser           string = "system.process.user"
+	SystemProcessCommand        string = "system.process.command"
+	SystemProcessError          string = "system.process.error"
 )
 
 func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
@@ -26,20 +28,20 @@ func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]i
 
 	defer func() {
 		if r := recover(); r != nil {
+			response[SystemProcessError] = fmt.Sprint(r)
 		}
 	}()
 
 	connection, err := util.GetConnection(profile)
 
 	if err != nil {
+		response[SystemProcessError] = fmt.Sprint(err)
 		return
 	}
 
 	defer func(connection *ssh.Client) {
-		if e := connection.Close(); e != nil {
-
-			err = e
-
+		if err = connection.Close(); err != nil {
+			response[SystemProcessError] = fmt.Sprint(err)
 		}
 	}(connection)
 
@@ -48,12 +50,14 @@ func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]i
 	//Session will automatically close
 
 	if err != nil {
+		response[SystemProcessError] = fmt.Sprint(err)
 		return
 	}
 
-	output, err := session.Output(processInfoCommand)
+	output, err := session.Output(SystemProcessMetricsCommand)
 
 	if err != nil {
+		response[SystemProcessError] = fmt.Sprint(err)
 		return
 	}
 
@@ -66,28 +70,28 @@ func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]i
 
 		processMetrics := make(map[string]interface{})
 
-		if pid, err := strconv.Atoi(process[0]); err == nil {
+		if processPID, err := strconv.Atoi(process[0]); err == nil {
 
-			processMetrics[processPID] = pid
+			processMetrics[SystemProcessPID] = processPID
 		}
 
-		if cpu, err := strconv.ParseFloat(process[1], 64); err == nil {
+		if processCPU, err := strconv.ParseFloat(process[1], 64); err == nil {
 
-			processMetrics[processCPU] = cpu
+			processMetrics[SystemProcessCPU] = processCPU
 		}
 
-		if memory, err := strconv.ParseFloat(process[2], 64); err == nil {
+		if processMemory, err := strconv.ParseFloat(process[2], 64); err == nil {
 
-			processMetrics[processMemory] = memory
+			processMetrics[SystemProcessMemory] = processMemory
 		}
 
-		processMetrics[processUser] = process[3]
+		processMetrics[SystemProcessUser] = process[3]
 
-		processMetrics[processCommand] = process[4]
+		processMetrics[SystemProcessCommand] = process[4]
 
 		result[i] = processMetrics
 	}
 
-	response[systemProcess] = result
+	response[SystemProcess] = result
 
 }

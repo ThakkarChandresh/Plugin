@@ -2,20 +2,22 @@ package memory
 
 import (
 	"Plugin/linux/util"
+	"fmt"
 	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
 
 const (
-	memoryInfoCommand    string = `free -b | awk 'NR>1 {print $2" " $3" " ((($2 - $7) * 100) / $2) " " $4 " " (($4 * 100) / $2) " " $7}'| head -n 1|tr '\n' " " && free -b | awk 'NR>2 {print $2}'`
-	installedMemory      string = "system.memory.installed.bytes"
-	usedMemory           string = "system.memory.used.bytes"
-	usedMemoryPercentage string = "system.memory.used.percentage"
-	freeMemory           string = "system.memory.free.bytes"
-	freeMemoryPercentage string = "system.memory.free.percentage"
-	availableMemory      string = "system.memory.available.bytes"
-	swapMemory           string = "system.memory.swap.bytes"
+	SystemMemoryMetricsCommand string = `free -b | awk 'NR>1 {print $2" " $3" " ((($2 - $7) * 100) / $2) " " $4 " " (($4 * 100) / $2) " " $7}'| head -n 1|tr '\n' " " && free -b | awk 'NR>2 {print $2}'`
+	SystemMemoryInstalledBytes string = "system.memory.installed.bytes"
+	SystemMemoryUsedBytes      string = "system.memory.used.bytes"
+	SystemMemoryUsedPercentage string = "system.memory.used.percentage"
+	SystemMemoryFreeBytes      string = "system.memory.free.bytes"
+	SystemMemoryFreePercentage string = "system.memory.free.percentage"
+	SystemMemoryAvailableBytes string = "system.memory.available.bytes"
+	SystemMemorySwapBytes      string = "system.memory.swap.bytes"
+	SystemMemoryError          string = "system.memory.error"
 )
 
 func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
@@ -27,20 +29,22 @@ func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]in
 
 	defer func() {
 		if r := recover(); r != nil {
+			response[SystemMemoryError] = fmt.Sprint(r)
 		}
 	}()
 
 	connection, err := util.GetConnection(profile)
 
 	if err != nil {
+		response[SystemMemoryError] = fmt.Sprint(err)
+
 		return
 	}
 
 	defer func(connection *ssh.Client) {
-		if e := connection.Close(); e != nil {
+		if err = connection.Close(); err != nil {
 
-			err = e
-
+			response[SystemMemoryError] = fmt.Sprint(err)
 		}
 	}(connection)
 
@@ -49,12 +53,16 @@ func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]in
 	//Session will automatically close
 
 	if err != nil {
+		response[SystemMemoryError] = fmt.Sprint(err)
+
 		return
 	}
 
-	output, err := session.Output(memoryInfoCommand)
+	output, err := session.Output(SystemMemoryMetricsCommand)
 
 	if err != nil {
+		response[SystemMemoryError] = fmt.Sprint(err)
+
 		return
 	}
 
@@ -62,37 +70,37 @@ func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]in
 
 	if installedMemoryBytes, err := strconv.Atoi(memoryMetrics[0]); err == nil {
 
-		response[installedMemory] = installedMemoryBytes
+		response[SystemMemoryInstalledBytes] = installedMemoryBytes
 	}
 
 	if usedMemoryBytes, err := strconv.Atoi(memoryMetrics[1]); err == nil {
 
-		response[usedMemory] = usedMemoryBytes
+		response[SystemMemoryUsedBytes] = usedMemoryBytes
 	}
 
-	if numOfUsedMemoryPercentage, err := strconv.ParseFloat(memoryMetrics[2], 64); err == nil {
+	if usedMemoryPercentage, err := strconv.ParseFloat(memoryMetrics[2], 64); err == nil {
 
-		response[usedMemoryPercentage] = numOfUsedMemoryPercentage
+		response[SystemMemoryUsedPercentage] = usedMemoryPercentage
 	}
 
 	if freeMemoryBytes, err := strconv.Atoi(memoryMetrics[3]); err == nil {
 
-		response[freeMemory] = freeMemoryBytes
+		response[SystemMemoryFreeBytes] = freeMemoryBytes
 	}
 
-	if numOfFreeMemoryPercentagee, err := strconv.ParseFloat(memoryMetrics[4], 64); err == nil {
+	if freeMemoryPercentagee, err := strconv.ParseFloat(memoryMetrics[4], 64); err == nil {
 
-		response[freeMemoryPercentage] = numOfFreeMemoryPercentagee
+		response[SystemMemoryFreePercentage] = freeMemoryPercentagee
 	}
 
 	if availableMemoryBytes, err := strconv.Atoi(memoryMetrics[5]); err == nil {
 
-		response[availableMemory] = availableMemoryBytes
+		response[SystemMemoryAvailableBytes] = availableMemoryBytes
 	}
 
 	if swapMemoryBytes, err := strconv.Atoi(memoryMetrics[6]); err == nil {
 
-		response[swapMemory] = swapMemoryBytes
+		response[SystemMemorySwapBytes] = swapMemoryBytes
 	}
 
 }

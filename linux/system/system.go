@@ -2,21 +2,23 @@ package system
 
 import (
 	"Plugin/linux/util"
+	"fmt"
 	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
 
 const (
-	systemInfoCommand string = `hostname |tr '\n' " " && uname |tr '\n' " " && ps -eo nlwp | awk '{ num_threads += $1 } END { print num_threads }' | tr '\n' " " && vmstat | tail -n 1 | awk '{print $12}' | tr '\n' " " && ps axo state | grep "R" | wc -l | tr '\n' " " && ps axo stat | grep "D" | wc -l && uptime -p | awk 'gsub("up ","")' && hostnamectl | grep "Operating System"`
-	osVersion         string = "system.os.version"
-	systemName        string = "system.name"
-	osName            string = "system.os.name"
-	upTime            string = "system.uptime"
-	threads           string = "system.threads"
-	contextSwitches   string = "system.context.switches"
-	runningProcesses  string = "system.running.processes"
-	blockProcesses    string = "system.block.processes"
+	SystemInfoMetricsCommand string = `hostname |tr '\n' " " && uname |tr '\n' " " && ps -eo nlwp | awk '{ num_threads += $1 } END { print num_threads }' | tr '\n' " " && vmstat | tail -n 1 | awk '{print $12}' | tr '\n' " " && ps axo state | grep "R" | wc -l | tr '\n' " " && ps axo stat | grep "D" | wc -l && uptime -p | awk 'gsub("up ","")' && hostnamectl | grep "Operating System"`
+	SystemOSVersion          string = "system.os.version"
+	SystemName               string = "system.name"
+	SystemOSName             string = "system.os.name"
+	SystemUpTime             string = "system.uptime"
+	SystemThreads            string = "system.threads"
+	SystemContextSwitches    string = "system.context.switches"
+	SystemRunningProcesses   string = "system.running.processes"
+	SystemBlockProcesse      string = "system.block.processes"
+	SystemInfoError          string = "system.info.error"
 )
 
 func GetSystemInformationMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
@@ -28,20 +30,22 @@ func GetSystemInformationMetrics(profile map[string]interface{}, channel chan ma
 
 	defer func() {
 		if r := recover(); r != nil {
+			response[SystemInfoError] = fmt.Sprint(r)
 		}
 	}()
 
 	connection, err := util.GetConnection(profile)
 
 	if err != nil {
+		response[SystemInfoError] = fmt.Sprint(err)
+
 		return
 	}
 
 	defer func(connection *ssh.Client) {
-		if e := connection.Close(); e != nil {
+		if err = connection.Close(); err != nil {
 
-			err = e
-
+			response[SystemInfoError] = fmt.Sprint(err)
 		}
 	}(connection)
 
@@ -50,45 +54,49 @@ func GetSystemInformationMetrics(profile map[string]interface{}, channel chan ma
 	//Session will automatically close
 
 	if err != nil {
+		response[SystemInfoError] = fmt.Sprint(err)
+
 		return
 	}
 
-	output, err := session.Output(systemInfoCommand)
+	output, err := session.Output(SystemInfoMetricsCommand)
 
 	if err != nil {
+		response[SystemInfoError] = fmt.Sprint(err)
+
 		return
 	}
 
 	systemInfoMetrics := strings.Split(strings.TrimSpace(string(output)), util.NewLine)
 
-	response[upTime] = systemInfoMetrics[1]
+	response[SystemUpTime] = systemInfoMetrics[1]
 
-	response[osVersion] = strings.TrimSpace(strings.Split(systemInfoMetrics[2], util.Colon)[1])
+	response[SystemOSVersion] = strings.TrimSpace(strings.Split(systemInfoMetrics[2], util.Colon)[1])
 
 	systemInfoMetrics = strings.Split(strings.TrimSpace(systemInfoMetrics[0]), util.SpaceSeparator)
 
-	response[systemName] = systemInfoMetrics[0]
+	response[SystemName] = systemInfoMetrics[0]
 
-	response[osName] = systemInfoMetrics[1]
+	response[SystemOSName] = systemInfoMetrics[1]
 
-	if numOfThreads, err := strconv.Atoi(systemInfoMetrics[2]); err == nil {
+	if threads, err := strconv.Atoi(systemInfoMetrics[2]); err == nil {
 
-		response[threads] = numOfThreads
+		response[SystemThreads] = threads
 	}
 
-	if numOfContextSwitches, err := strconv.Atoi(systemInfoMetrics[3]); err == nil {
+	if contextSwitches, err := strconv.Atoi(systemInfoMetrics[3]); err == nil {
 
-		response[contextSwitches] = numOfContextSwitches
+		response[SystemContextSwitches] = contextSwitches
 	}
 
-	if numOfRunningProcesses, err := strconv.Atoi(systemInfoMetrics[4]); err == nil {
+	if runningProcesses, err := strconv.Atoi(systemInfoMetrics[4]); err == nil {
 
-		response[runningProcesses] = numOfRunningProcesses
+		response[SystemRunningProcesses] = runningProcesses
 	}
 
-	if numOfBlockProcesses, err := strconv.Atoi(systemInfoMetrics[5]); err == nil {
+	if blockProcesses, err := strconv.Atoi(systemInfoMetrics[5]); err == nil {
 
-		response[blockProcesses] = numOfBlockProcesses
+		response[SystemBlockProcesse] = blockProcesses
 	}
 
 }
