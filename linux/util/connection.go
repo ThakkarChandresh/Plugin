@@ -7,29 +7,30 @@ import (
 )
 
 const (
-	credentialProfile string        = "credential_profile"
-	username          string        = "username"
-	password          string        = "password"
-	sshTimout         time.Duration = 30
-	tcp               string        = "tcp"
-	discoveryProfile  string        = "discovery_profile"
-	ip                string        = "ip"
-	port              string        = "port"
+	CredentialProfile string        = "credential_profile"
+	Username          string        = "username"
+	Password          string        = "password"
+	SSHTimeout        time.Duration = 30 * time.Second
+	TCP               string        = "tcp"
+	DiscoveryProfile  string        = "discovery_profile"
+	IP                string        = "ip"
+	Port              string        = "port"
 )
 
 func GetConnection(profile map[string]interface{}) (connection *ssh.Client, err error) {
 
 	config := &ssh.ClientConfig{
-		User: fmt.Sprint(profile[credentialProfile].(map[string]interface{})[username]),
 
-		Auth: []ssh.AuthMethod{ssh.Password(fmt.Sprint(profile[credentialProfile].(map[string]interface{})[password]))},
+		User: fmt.Sprint(profile[CredentialProfile].(map[string]interface{})[Username]),
+
+		Auth: []ssh.AuthMethod{ssh.Password(fmt.Sprint(profile[CredentialProfile].(map[string]interface{})[Password]))},
 
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 
-		Timeout: sshTimout * time.Second,
+		Timeout: SSHTimeout,
 	}
 
-	connection, err = ssh.Dial(tcp, fmt.Sprint(profile[discoveryProfile].(map[string]interface{})[ip], Colon, profile[discoveryProfile].(map[string]interface{})[port]), config)
+	connection, err = ssh.Dial(TCP, fmt.Sprint(profile[DiscoveryProfile].(map[string]interface{})[IP], Colon, profile[DiscoveryProfile].(map[string]interface{})[Port]), config)
 
 	return
 }
