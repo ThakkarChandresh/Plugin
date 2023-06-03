@@ -57,7 +57,7 @@ func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]in
 		return
 	}
 
-	memoryMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.SpaceSeparator)
+	memoryMetrics := strings.Split(strings.TrimSpace(string(output)), util.SpaceSeparator)
 
 	response[installedMemory] = memoryMetrics[0]
 

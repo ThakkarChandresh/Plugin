@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"golang.org/x/crypto/ssh"
 	"time"
 )
@@ -17,14 +18,18 @@ const (
 )
 
 func GetConnection(profile map[string]interface{}) (connection *ssh.Client, err error) {
+
 	config := &ssh.ClientConfig{
-		User:            profile[credentialProfile].(map[string]interface{})[username].(string),
-		Auth:            []ssh.AuthMethod{ssh.Password(profile[credentialProfile].(map[string]interface{})[password].(string))},
+		User: fmt.Sprintf("%V", profile[credentialProfile].(map[string]interface{})[username]),
+
+		Auth: []ssh.AuthMethod{ssh.Password(fmt.Sprintf("%v", profile[credentialProfile].(map[string]interface{})[password]))},
+
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         sshTimout * time.Second,
+
+		Timeout: sshTimout * time.Second,
 	}
 
-	connection, err = ssh.Dial(tcp, profile[discoveryProfile].(map[string]interface{})[ip].(string)+Colon+profile[discoveryProfile].(map[string]interface{})[port].(string), config)
+	connection, err = ssh.Dial(tcp, fmt.Sprint(profile[discoveryProfile].(map[string]interface{})[ip], Colon, profile[discoveryProfile].(map[string]interface{})[port]), config)
 
 	return
 }

@@ -58,7 +58,7 @@ func GetSystemInformationMetrics(profile map[string]interface{}, channel chan ma
 		return
 	}
 
-	systemInfoMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.NewLine)
+	systemInfoMetrics := strings.Split(strings.TrimSpace(string(output)), util.NewLine)
 
 	response[upTime] = systemInfoMetrics[1]
 

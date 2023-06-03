@@ -57,42 +57,60 @@ func GetCpuMetrics(profile map[string]interface{}, channel chan map[string]inter
 		return
 	}
 
-	allCPUMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.NewLine)
-
-	cores, err := strconv.Atoi(allCPUMetrics[0])
-
-	if err != nil {
-		return
-	}
+	allCPUMetrics := strings.Split(strings.TrimSpace(string(output)), util.NewLine)
 
 	response = make(map[string]interface{})
 
 	avgCPUMetrics := strings.Split(allCPUMetrics[1], util.SpaceSeparator)
 
-	response[cpuCores] = cores
+	if cores, err := strconv.Atoi(allCPUMetrics[0]); err == nil {
 
-	response[cpuPercentage] = avgCPUMetrics[1]
+		response[cpuCores] = cores
+	}
 
-	response[cpuUserPercentage] = avgCPUMetrics[2]
+	if percentage, err := strconv.ParseFloat(avgCPUMetrics[1], 64); err == nil {
 
-	response[cpuIdlePercentage] = avgCPUMetrics[3]
+		response[cpuPercentage] = percentage
+	}
+
+	if userPercentage, err := strconv.ParseFloat(avgCPUMetrics[2], 64); err == nil {
+
+		response[cpuUserPercentage] = userPercentage
+	}
+
+	if idlePercentage, err := strconv.ParseFloat(avgCPUMetrics[3], 64); err == nil {
+
+		response[cpuIdlePercentage] = idlePercentage
+	}
 
 	allCPUMetrics = allCPUMetrics[2:]
 
-	result := make([]map[string]interface{}, cores)
+	result := make([]map[string]interface{}, len(allCPUMetrics))
 
 	for i := 0; i < len(allCPUMetrics); i++ {
 		cpu := strings.Split(allCPUMetrics[i], util.SpaceSeparator)
 
 		cpuMetrics := make(map[string]any)
 
-		cpuMetrics[cpuCore] = cpu[0]
+		if core, err := strconv.Atoi(cpu[0]); err == nil {
 
-		cpuMetrics[cpuPercentage] = cpu[1]
+			cpuMetrics[cpuCore] = core
+		}
 
-		cpuMetrics[cpuUserPercentage] = cpu[2]
+		if percentage, err := strconv.ParseFloat(cpu[1], 64); err == nil {
 
-		cpuMetrics[cpuIdlePercentage] = cpu[3]
+			cpuMetrics[cpuPercentage] = percentage
+		}
+
+		if userPercentage, err := strconv.ParseFloat(cpu[2], 64); err == nil {
+
+			cpuMetrics[cpuUserPercentage] = userPercentage
+		}
+
+		if idlePercentage, err := strconv.ParseFloat(cpu[3], 64); err == nil {
+
+			cpuMetrics[cpuIdlePercentage] = idlePercentage
+		}
 
 		result[i] = cpuMetrics
 	}

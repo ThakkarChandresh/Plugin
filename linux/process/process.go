@@ -56,7 +56,7 @@ func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]i
 		return
 	}
 
-	allProcessMetrics := strings.Split(strings.Trim(string(output), util.NewLine), util.NewLine)
+	allProcessMetrics := strings.Split(strings.TrimSpace(string(output)), util.NewLine)
 
 	result := make([]map[string]interface{}, len(allProcessMetrics))
 

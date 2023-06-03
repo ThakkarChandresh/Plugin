@@ -18,13 +18,16 @@ func main() {
 	var request = make(map[string]interface{})
 
 	defer func() {
+
 		jsonStr, _ := json.Marshal(request)
 
 		fmt.Println(fmt.Sprintf("%v", string(jsonStr)))
 	}()
 
 	defer func() {
+
 		if r := recover(); r != nil {
+
 			request["err"] = fmt.Sprintf("%v", r)
 		}
 	}()
@@ -34,7 +37,9 @@ func main() {
 	err := json.Unmarshal([]byte(input), &request)
 
 	if err != nil {
+
 		request["err"] = fmt.Sprintf("%v", err)
+
 		return
 	}
 
@@ -50,7 +55,16 @@ func main() {
 	}
 
 	if err != nil {
+
 		request["err"] = fmt.Sprintf("%v", err)
+
+		return
+	}
+
+	if _, err = json.Marshal(response); err != nil {
+
+		request["err"] = fmt.Sprintf("%v", err)
+
 		return
 	}
 

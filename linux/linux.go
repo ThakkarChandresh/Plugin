@@ -2,6 +2,7 @@ package linux
 
 import (
 	"Plugin/linux/cpu"
+	"Plugin/linux/disk"
 	"Plugin/linux/memory"
 	"Plugin/linux/process"
 	"Plugin/linux/system"
@@ -81,7 +82,7 @@ func Collect(profile map[string]interface{}) (response map[string]interface{}, e
 		}
 	}()
 
-	channel := make(chan map[string]interface{}, 4)
+	channel := make(chan map[string]interface{}, 5)
 
 	defer func() {
 		close(channel)
@@ -95,7 +96,9 @@ func Collect(profile map[string]interface{}) (response map[string]interface{}, e
 
 	go cpu.GetCpuMetrics(profile, channel)
 
-	for i := 0; i < 4; i++ {
+	go disk.GetDiskMetrics(profile, channel)
+
+	for i := 0; i < 5; i++ {
 		output := <-channel
 
 		for key, value := range output {
