@@ -3,11 +3,12 @@ package process
 import (
 	"Plugin/linux/util"
 	"golang.org/x/crypto/ssh"
+	"strconv"
 	"strings"
 )
 
 const (
-	processInfoCommand string = `ps aux | awk 'NR> 1 {print $2 " " $3 "% " $4 "% " $1" "$11}'`
+	processInfoCommand string = `ps aux | awk 'NR> 1 {print $2 " " $3 " " $4 " " $1" "$11}'`
 	systemProcess      string = "system.process"
 	processPID         string = "system.process.pid"
 	processCPU         string = "system.process.cpu"
@@ -65,11 +66,20 @@ func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]i
 
 		processMetrics := make(map[string]interface{})
 
-		processMetrics[processPID] = process[0]
+		if pid, err := strconv.Atoi(process[0]); err == nil {
 
-		processMetrics[processCPU] = process[1]
+			processMetrics[processPID] = pid
+		}
 
-		processMetrics[processMemory] = process[2]
+		if cpu, err := strconv.ParseFloat(process[1], 64); err == nil {
+
+			processMetrics[processCPU] = cpu
+		}
+
+		if memory, err := strconv.ParseFloat(process[2], 64); err == nil {
+
+			processMetrics[processMemory] = memory
+		}
 
 		processMetrics[processUser] = process[3]
 

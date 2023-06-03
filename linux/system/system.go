@@ -3,6 +3,7 @@ package system
 import (
 	"Plugin/linux/util"
 	"golang.org/x/crypto/ssh"
+	"strconv"
 	"strings"
 )
 
@@ -70,11 +71,24 @@ func GetSystemInformationMetrics(profile map[string]interface{}, channel chan ma
 
 	response[osName] = systemInfoMetrics[1]
 
-	response[threads] = systemInfoMetrics[2]
+	if numOfThreads, err := strconv.Atoi(systemInfoMetrics[2]); err == nil {
 
-	response[contextSwitches] = systemInfoMetrics[3]
+		response[threads] = numOfThreads
+	}
 
-	response[runningProcesses] = systemInfoMetrics[4]
+	if numOfContextSwitches, err := strconv.Atoi(systemInfoMetrics[3]); err == nil {
 
-	response[blockProcesses] = systemInfoMetrics[5]
+		response[contextSwitches] = numOfContextSwitches
+	}
+
+	if numOfRunningProcesses, err := strconv.Atoi(systemInfoMetrics[4]); err == nil {
+
+		response[runningProcesses] = numOfRunningProcesses
+	}
+
+	if numOfBlockProcesses, err := strconv.Atoi(systemInfoMetrics[5]); err == nil {
+
+		response[blockProcesses] = numOfBlockProcesses
+	}
+
 }

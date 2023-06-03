@@ -3,6 +3,7 @@ package memory
 import (
 	"Plugin/linux/util"
 	"golang.org/x/crypto/ssh"
+	"strconv"
 	"strings"
 )
 
@@ -59,17 +60,39 @@ func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]in
 
 	memoryMetrics := strings.Split(strings.TrimSpace(string(output)), util.SpaceSeparator)
 
-	response[installedMemory] = memoryMetrics[0]
+	if installedMemoryBytes, err := strconv.Atoi(memoryMetrics[0]); err == nil {
 
-	response[usedMemory] = memoryMetrics[1]
+		response[installedMemory] = installedMemoryBytes
+	}
 
-	response[usedMemoryPercentage] = memoryMetrics[2]
+	if usedMemoryBytes, err := strconv.Atoi(memoryMetrics[1]); err == nil {
 
-	response[freeMemory] = memoryMetrics[3]
+		response[usedMemory] = usedMemoryBytes
+	}
 
-	response[freeMemoryPercentage] = memoryMetrics[4]
+	if numOfUsedMemoryPercentage, err := strconv.ParseFloat(memoryMetrics[2], 64); err == nil {
 
-	response[availableMemory] = memoryMetrics[5]
+		response[usedMemoryPercentage] = numOfUsedMemoryPercentage
+	}
 
-	response[swapMemory] = memoryMetrics[6]
+	if freeMemoryBytes, err := strconv.Atoi(memoryMetrics[3]); err == nil {
+
+		response[freeMemory] = freeMemoryBytes
+	}
+
+	if numOfFreeMemoryPercentagee, err := strconv.ParseFloat(memoryMetrics[4], 64); err == nil {
+
+		response[freeMemoryPercentage] = numOfFreeMemoryPercentagee
+	}
+
+	if availableMemoryBytes, err := strconv.Atoi(memoryMetrics[5]); err == nil {
+
+		response[availableMemory] = availableMemoryBytes
+	}
+
+	if swapMemoryBytes, err := strconv.Atoi(memoryMetrics[6]); err == nil {
+
+		response[swapMemory] = swapMemoryBytes
+	}
+
 }

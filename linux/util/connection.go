@@ -20,9 +20,9 @@ const (
 func GetConnection(profile map[string]interface{}) (connection *ssh.Client, err error) {
 
 	config := &ssh.ClientConfig{
-		User: fmt.Sprintf("%V", profile[credentialProfile].(map[string]interface{})[username]),
+		User: fmt.Sprint(profile[credentialProfile].(map[string]interface{})[username]),
 
-		Auth: []ssh.AuthMethod{ssh.Password(fmt.Sprintf("%v", profile[credentialProfile].(map[string]interface{})[password]))},
+		Auth: []ssh.AuthMethod{ssh.Password(fmt.Sprint(profile[credentialProfile].(map[string]interface{})[password]))},
 
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 

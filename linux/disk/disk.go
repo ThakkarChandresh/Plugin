@@ -8,7 +8,13 @@ import (
 )
 
 const (
-	diskInfoCommand = `iostat -dx | awk 'NR>3 {print $1 " " $2 " " $8 " " $3 " " $9}'`
+	diskInfoCommand      string = `iostat -dx | awk 'NR>3 {print $1 " " $2 " " $8 " " $3 " " $9}'`
+	systemDisk           string = "system.disk"
+	systemDiskBytes      string = "system.disk.bytes.per.sec"
+	systemDiskWriteBytes string = "system.disk.write.bytes.per.sec"
+	systemDiskReadBytes  string = "system.disk.read.bytes.per.sec"
+	systemDiskWriteOps   string = "system.disk.write.ops.per.sec"
+	systemDiskReadOps    string = "system.disk.read.ops.per.sec"
 )
 
 func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
@@ -62,23 +68,23 @@ func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]inte
 
 		diskMetrics := make(map[string]interface{})
 
-		diskMetrics["system.disk"] = disk[0]
+		diskMetrics[systemDisk] = disk[0]
 
 		if readOps, err := strconv.ParseFloat(disk[1], 64); err == nil {
 
-			diskMetrics["system.disk.read.ops.per.sec"] = readOps
+			diskMetrics[systemDiskReadOps] = readOps
 		}
 
 		if writeOps, err := strconv.ParseFloat(disk[2], 64); err == nil {
 
-			diskMetrics["system.disk.write.ops.per.sec"] = writeOps
+			diskMetrics[systemDiskWriteOps] = writeOps
 		}
 
 		if readBytes, err := strconv.ParseFloat(disk[3], 64); err == nil {
 
 			readBytes *= 1024
 
-			diskMetrics["system.disk.read.bytes.per.sec"] = readBytes
+			diskMetrics[systemDiskReadBytes] = readBytes
 
 			totalBytes += readBytes
 		}
@@ -87,15 +93,15 @@ func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]inte
 
 			writeBytes *= 1024
 
-			diskMetrics["system.disk.write.bytes.per.sec"] = writeBytes
+			diskMetrics[systemDiskWriteBytes] = writeBytes
 
 			totalBytes += writeBytes
 		}
 
-		diskMetrics["system.disk.bytes.per.sec"] = totalBytes
+		diskMetrics[systemDiskBytes] = totalBytes
 
 		result[i] = diskMetrics
 	}
 
-	response["system.disk"] = result
+	response[systemDisk] = result
 }
