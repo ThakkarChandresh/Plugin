@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"Plugin/linux/util"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"strconv"
@@ -16,34 +17,27 @@ const (
 	SystemCPUPercentage     string = "system.cpu.percentage"
 	SystemCPUUserPercentage string = "system.cpu.user.percentage"
 	SystemCPUIdlePercentage string = "system.cpu.idle.percentage"
-	SystemCPUError          string = "system.cpu.error"
 )
 
-func GetCpuMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
-	response := make(map[string]interface{})
+func Collect(profile map[string]interface{}) (response map[string]interface{}, err error) {
 
-	defer func() {
-		channel <- response
-	}()
+	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			response[SystemCPUError] = fmt.Sprint(r)
+			err = errors.New(fmt.Sprint(r))
 		}
 	}()
 
 	connection, err := util.GetConnection(profile)
 
 	if err != nil {
-		response[SystemCPUError] = fmt.Sprint(err)
-
 		return
 	}
 
 	defer func(connection *ssh.Client) {
-		if err = connection.Close(); err != nil {
-
-			response[SystemCPUError] = fmt.Sprint(err)
+		if closeErr := connection.Close(); closeErr != nil {
+			err = closeErr
 		}
 	}(connection)
 
@@ -52,23 +46,16 @@ func GetCpuMetrics(profile map[string]interface{}, channel chan map[string]inter
 	//Session will automatically close
 
 	if err != nil {
-		response[SystemCPUError] = fmt.Sprint(err)
-
 		return
 	}
 
 	output, err := session.Output(SystemCPUMetricsCommand)
 
 	if err != nil {
-
-		response[SystemCPUError] = fmt.Sprint(err)
-
 		return
 	}
 
 	allCPUMetrics := strings.Split(strings.TrimSpace(string(output)), util.NewLine)
-
-	response = make(map[string]interface{})
 
 	avgCPUMetrics := strings.Split(allCPUMetrics[1], util.SpaceSeparator)
 
@@ -125,4 +112,6 @@ func GetCpuMetrics(profile map[string]interface{}, channel chan map[string]inter
 	}
 
 	response[SystemCPU] = result
+
+	return
 }

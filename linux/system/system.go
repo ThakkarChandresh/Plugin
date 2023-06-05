@@ -2,8 +2,8 @@ package system
 
 import (
 	"Plugin/linux/util"
+	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
@@ -18,52 +18,21 @@ const (
 	SystemContextSwitches    string = "system.context.switches"
 	SystemRunningProcesses   string = "system.running.processes"
 	SystemBlockProcesse      string = "system.block.processes"
-	SystemInfoError          string = "system.info.error"
 )
 
-func GetSystemInformationMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
-	response := make(map[string]interface{})
+func Collect(profile map[string]interface{}) (response map[string]interface{}, err error) {
 
-	defer func() {
-		channel <- response
-	}()
+	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			response[SystemInfoError] = fmt.Sprint(r)
+			err = errors.New(fmt.Sprint(r))
 		}
 	}()
 
-	connection, err := util.GetConnection(profile)
+	output, err := util.ExecuteCommand(profile, SystemInfoMetricsCommand)
 
 	if err != nil {
-		response[SystemInfoError] = fmt.Sprint(err)
-
-		return
-	}
-
-	defer func(connection *ssh.Client) {
-		if err = connection.Close(); err != nil {
-
-			response[SystemInfoError] = fmt.Sprint(err)
-		}
-	}(connection)
-
-	session, err := connection.NewSession()
-
-	//Session will automatically close
-
-	if err != nil {
-		response[SystemInfoError] = fmt.Sprint(err)
-
-		return
-	}
-
-	output, err := session.Output(SystemInfoMetricsCommand)
-
-	if err != nil {
-		response[SystemInfoError] = fmt.Sprint(err)
-
 		return
 	}
 
@@ -99,4 +68,5 @@ func GetSystemInformationMetrics(profile map[string]interface{}, channel chan ma
 		response[SystemBlockProcesse] = blockProcesses
 	}
 
+	return
 }

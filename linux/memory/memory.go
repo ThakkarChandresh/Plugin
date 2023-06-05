@@ -2,8 +2,8 @@ package memory
 
 import (
 	"Plugin/linux/util"
+	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
@@ -17,52 +17,21 @@ const (
 	SystemMemoryFreePercentage string = "system.memory.free.percentage"
 	SystemMemoryAvailableBytes string = "system.memory.available.bytes"
 	SystemMemorySwapBytes      string = "system.memory.swap.bytes"
-	SystemMemoryError          string = "system.memory.error"
 )
 
-func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
-	response := make(map[string]interface{})
+func Collect(profile map[string]interface{}) (response map[string]interface{}, err error) {
 
-	defer func() {
-		channel <- response
-	}()
+	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			response[SystemMemoryError] = fmt.Sprint(r)
+			err = errors.New(fmt.Sprint(r))
 		}
 	}()
 
-	connection, err := util.GetConnection(profile)
+	output, err := util.ExecuteCommand(profile, SystemMemoryMetricsCommand)
 
 	if err != nil {
-		response[SystemMemoryError] = fmt.Sprint(err)
-
-		return
-	}
-
-	defer func(connection *ssh.Client) {
-		if err = connection.Close(); err != nil {
-
-			response[SystemMemoryError] = fmt.Sprint(err)
-		}
-	}(connection)
-
-	session, err := connection.NewSession()
-
-	//Session will automatically close
-
-	if err != nil {
-		response[SystemMemoryError] = fmt.Sprint(err)
-
-		return
-	}
-
-	output, err := session.Output(SystemMemoryMetricsCommand)
-
-	if err != nil {
-		response[SystemMemoryError] = fmt.Sprint(err)
-
 		return
 	}
 
@@ -102,5 +71,5 @@ func GetMemoryMetrics(profile map[string]interface{}, channel chan map[string]in
 
 		response[SystemMemorySwapBytes] = swapMemoryBytes
 	}
-
+	return
 }

@@ -2,8 +2,8 @@ package process
 
 import (
 	"Plugin/linux/util"
+	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
@@ -16,48 +16,21 @@ const (
 	SystemProcessMemory         string = "system.process.memory"
 	SystemProcessUser           string = "system.process.user"
 	SystemProcessCommand        string = "system.process.command"
-	SystemProcessError          string = "system.process.error"
 )
 
-func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
-	response := make(map[string]interface{})
+func Collect(profile map[string]interface{}) (response map[string]interface{}, err error) {
 
-	defer func() {
-		channel <- response
-	}()
+	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			response[SystemProcessError] = fmt.Sprint(r)
+			err = errors.New(fmt.Sprint(r))
 		}
 	}()
 
-	connection, err := util.GetConnection(profile)
+	output, err := util.ExecuteCommand(profile, SystemProcessMetricsCommand)
 
 	if err != nil {
-		response[SystemProcessError] = fmt.Sprint(err)
-		return
-	}
-
-	defer func(connection *ssh.Client) {
-		if err = connection.Close(); err != nil {
-			response[SystemProcessError] = fmt.Sprint(err)
-		}
-	}(connection)
-
-	session, err := connection.NewSession()
-
-	//Session will automatically close
-
-	if err != nil {
-		response[SystemProcessError] = fmt.Sprint(err)
-		return
-	}
-
-	output, err := session.Output(SystemProcessMetricsCommand)
-
-	if err != nil {
-		response[SystemProcessError] = fmt.Sprint(err)
 		return
 	}
 
@@ -94,4 +67,5 @@ func GetProcessMetrics(profile map[string]interface{}, channel chan map[string]i
 
 	response[SystemProcess] = result
 
+	return
 }

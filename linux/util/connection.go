@@ -17,7 +17,7 @@ const (
 	Port              string        = "port"
 )
 
-func GetConnection(profile map[string]interface{}) (connection *ssh.Client, err error) {
+func getConnection(profile map[string]interface{}) (connection *ssh.Client, err error) {
 
 	config := &ssh.ClientConfig{
 
@@ -31,6 +31,37 @@ func GetConnection(profile map[string]interface{}) (connection *ssh.Client, err 
 	}
 
 	connection, err = ssh.Dial(TCP, fmt.Sprint(profile[DiscoveryProfile].(map[string]interface{})[IP], Colon, profile[DiscoveryProfile].(map[string]interface{})[Port]), config)
+
+	return
+}
+
+func ExecuteCommand(profile map[string]interface{}, command string) (output []byte, err error) {
+
+	connection, err := getConnection(profile)
+
+	if err != nil {
+		return
+	}
+
+	defer func(connection *ssh.Client) {
+		if closeErr := connection.Close(); closeErr != nil {
+			err = closeErr
+		}
+	}(connection)
+
+	session, err := connection.NewSession()
+
+	//Session will automatically close
+
+	if err != nil {
+		return
+	}
+
+	output, err = session.Output(command)
+
+	if err != nil {
+		return
+	}
 
 	return
 }

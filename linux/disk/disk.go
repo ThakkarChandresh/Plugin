@@ -2,8 +2,8 @@ package disk
 
 import (
 	"Plugin/linux/util"
+	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
@@ -16,52 +16,21 @@ const (
 	SystemDiskReadBytesPerSec  string = "system.disk.read.bytes.per.sec"
 	SystemDiskWriteOpsPerSec   string = "system.disk.write.ops.per.sec"
 	SystemDiskReadOpsPerSec    string = "system.disk.read.ops.per.sec"
-	SystemDiskError            string = "system.disk.error"
 )
 
-func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]interface{}) {
-	response := make(map[string]interface{})
+func Collect(profile map[string]interface{}) (response map[string]interface{}, err error) {
 
-	defer func() {
-		channel <- response
-	}()
+	response = make(map[string]interface{})
 
 	defer func() {
 		if r := recover(); r != nil {
-			response[SystemDiskError] = fmt.Sprint(r)
+			err = errors.New(fmt.Sprint(r))
 		}
 	}()
 
-	connection, err := util.GetConnection(profile)
+	output, err := util.ExecuteCommand(profile, SystemDiskMetricsCommand)
 
 	if err != nil {
-		response[SystemDiskError] = fmt.Sprint(err)
-
-		return
-	}
-
-	defer func(connection *ssh.Client) {
-		if err = connection.Close(); err != nil {
-
-			response[SystemDiskError] = fmt.Sprint(err)
-		}
-	}(connection)
-
-	session, err := connection.NewSession()
-
-	//Session will automatically close
-
-	if err != nil {
-		response[SystemDiskError] = fmt.Sprint(err)
-
-		return
-	}
-
-	output, err := session.Output(SystemDiskMetricsCommand)
-
-	if err != nil {
-		response[SystemDiskError] = fmt.Sprint(err)
-
 		return
 	}
 
@@ -112,4 +81,6 @@ func GetDiskMetrics(profile map[string]interface{}, channel chan map[string]inte
 	}
 
 	response[SystemDisk] = result
+
+	return
 }
