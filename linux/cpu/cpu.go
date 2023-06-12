@@ -4,7 +4,6 @@ import (
 	"Plugin/linux/util"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 )
@@ -29,27 +28,7 @@ func Collect(profile map[string]interface{}) (response map[string]interface{}, e
 		}
 	}()
 
-	connection, err := util.GetConnection(profile)
-
-	if err != nil {
-		return
-	}
-
-	defer func(connection *ssh.Client) {
-		if closeErr := connection.Close(); closeErr != nil {
-			err = closeErr
-		}
-	}(connection)
-
-	session, err := connection.NewSession()
-
-	//Session will automatically close
-
-	if err != nil {
-		return
-	}
-
-	output, err := session.Output(SystemCPUMetricsCommand)
+	output, err := util.ExecuteCommand(profile, SystemCPUMetricsCommand)
 
 	if err != nil {
 		return
