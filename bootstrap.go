@@ -36,17 +36,14 @@ func main() {
 
 	defer func() {
 
-		jsonStr, _ := json.Marshal(request)
-
-		fmt.Println(fmt.Sprint(string(jsonStr)))
-	}()
-
-	defer func() {
-
 		if r := recover(); r != nil {
 
 			request[Error] = fmt.Sprint(r)
 		}
+
+		jsonStr, _ := json.Marshal(request)
+
+		fmt.Println(fmt.Sprint(string(jsonStr)))
 	}()
 
 	input := os.Args[1]
